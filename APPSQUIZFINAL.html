@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>TEBAK KATA</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root { --bg:#0f172a; --card:#ffffff; --accent:#0ea5e9; --muted:#64748b; --ok:#16a34a; --warn:#f59e0b; --bad:#dc2626; }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:#0b1220}
+    .wrap{max-width:1000px;margin-inline:auto;padding:24px}
+    .card{background:var(--card);border-radius:16px;box-shadow:0 10px 30px rgba(2,6,23,.25)}
+    header.card{padding:18px 20px;display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center}
+    .controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+    label{font-size:14px;color:var(--muted)}
+    input[type="file"]{padding:8px 10px;border:1px dashed #cbd5e1;border-radius:10px;background:#f8fafc}
+    select, button{border:1px solid #e2e8f0;border-radius:10px;padding:10px 14px;background:#fff;font-weight:600}
+    button.primary{background:var(--accent);color:white;border:none}
+    main.card{margin-top:16px;padding:24px}
+    .filters.card{margin-top:12px;padding:12px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+    .az{display:flex;gap:6px;flex-wrap:wrap}
+    .az button{min-width:34px;height:34px;border:1px solid #e2e8f0;background:#fff;border-radius:8px;cursor:pointer;font-weight:700}
+    .az button.active{background:var(--accent);border-color:var(--accent);color:#fff}
+    .stat{color:var(--muted);font-size:14px;margin-left:auto}
+    .progress{height:10px;background:#e2e8e0;border-radius:999px;overflow:hidden;margin-bottom:12px}
+    .progress .fill{height:100%;width:0%;background:linear-gradient(90deg,var(--accent),#22c55e);transition:width .3s ease}
+    .timer{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+    .timer .bar{position:relative;flex:1;height:12px;background:#e2e8f0;border-radius:999px;overflow:hidden}
+    .timer .bar .fill{position:absolute;left:0;top:0;bottom:0;width:100%;background:var(--ok);transition:width .1s linear, background .1s linear}
+    .timer .ttext{min-width:56px;text-align:right;font-weight:700;color:#0b1220}
+    /* MODIFIKASI: Peningkatan jarak 2x lipat lagi */
+    .jp{font-size:40px;line-height:1.25;margin:8px 0 80px} /* Ditingkatkan menjadi 80px */
+    ruby{ruby-position:over}
+    rt{font-size:.45em;color:#475569}
+    .romaji{font-size:14px;color:var(--muted);margin-bottom:160px} /* Ditingkatkan menjadi 160px */
+    /* AKHIR MODIFIKASI */
+    .choices{display:grid;grid-template-columns:repeat(2,minmax(220px,1fr));gap:12px;margin-top:8px}
+    
+    /* MODIFIKASI: Jawaban rata tengah untuk semua mode */
+    .choice{
+      padding:14px;
+      border:1.5px solid #e2e8f0;
+      border-radius:12px;
+      background:#fff;
+      cursor:pointer;
+      text-align:center; /* RATA TENGAH */
+      font-weight:600;
+      /* Hilangkan min-width 0 agar teks bisa rata tengah */
+    }
+    .choice:hover{border-color:var(--accent)}
+    .choice.correct{border-color:var(--ok);background:#f0fdf4}
+    .choice.wrong{border-color:var(--bad);background:#fef2f2}
+    
+    /* MODIFIKASI CSS UNTUK TAMPILAN META */
+    .meta{
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 0 12px;
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 14px;
+      margin-bottom: 8px; /* Tambahkan sedikit jarak bawah */
+    }
+    .meta-stat{
+      display: flex;
+      justify-content: flex-start;
+      align-items: center;
+      grid-column: 1 / 2;
+    }
+    .meta-score{
+      display: flex;
+      flex-direction: column; /* Tumpuk Skor dan Waktu */
+      align-items: flex-end;
+      grid-column: 2 / 3;
+    }
+    .meta-score > div {
+      line-height: 1.4; /* Jaga agar tampilan Skor dan Waktu berdekatan */
+    }
+    #timer-placement{
+        color: var(--accent);
+        font-weight: 600;
+        font-size: 14px;
+        min-width: 56px;
+        text-align: right;
+    }
+    /* AKHIR MODIFIKASI CSS */
+    
+    .hidden{display:none}
+    .footer{margin-top:18px;display:flex;gap:10px;flex-wrap:wrap}
+
+    :root{ --jp-answer-size: clamp(28px, 2.5vw + 16px, 48px); }
+    .choice ruby, .choice rb{ font-size: var(--jp-answer-size); line-height: 1.15; display:inline; }
+    .choice rt{ font-size: .5em; }
+
+    /* Hapus grid untuk .choice agar bisa rata tengah penuh */
+    .choice{ display:block; }
+    
+    /* Aturan untuk mode idjp agar tidak menggunakan A/B/C/D */
+    .choices.idjp{ display:grid; grid-template-columns:repeat(2,minmax(220px,1fr)); gap:12px;}
+    @media (max-width:1024px){ .choices.idjp{ grid-template-columns:repeat(2,minmax(220px,1fr)); } }
+    @media (max-width:640px){ .choices.idjp{ grid-template-columns:1fr; } }
+    /* Hapus grid dan chip untuk idjp */
+    .choices.idjp .choice{ 
+        display: block; /* Hapus grid */
+        padding: 14px;
+    }
+    .choices.idjp .chip{ display: none; } /* Sembunyikan chip A/B/C/D */
+    .choices.idjp .stack{ 
+        grid-column: 1 / -1; /* Stack mengambil seluruh lebar */
+        display: block; /* Hapus flex */
+        text-align: center; /* Rata tengah untuk konten di dalamnya */
+    }
+    .choices.idjp .furigana{ margin-bottom: 4px; } /* Jarak untuk stack */
+
+
+    /* NEW: bigger kana for Kanji→Hiragana answers */
+    .choices.kanaonly .kana{
+      font-size: clamp(28px, 6.8vw, 56px);
+      line-height: 1.1;
+      letter-spacing: .02em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    /* NEW: bigger kanji for Kana→Kanji answers */
+    .choices.kanjionly .kanji{
+      font-size: clamp(28px, 6.8vw, 56px);
+      line-height: 1.1;
+      letter-spacing: .02em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: clip;
+    }
+
+
+    @media (max-width: 480px){
+      .wrap{ padding:12px; }
+      header.card{ grid-template-columns:1fr; gap:8px; padding:14px; }
+      .controls{ gap:8px; flex-wrap:wrap; }
+      .controls > *{ flex:1 1 auto; min-width:44%; }
+      main.card{ padding:16px; }
+      .filters.card{ padding:10px; gap:8px; }
+      .jp{ font-size: clamp(22px, 7.2vw, 34px); line-height:1.2; }
+      .choices, .choices.idjp{ grid-template-columns:1fr; gap:10px; }
+      .choices .choice, .choices.idjp .choice{ padding:14px; border-radius:12px; min-height:56px; }
+      /* Hapus kode yang bergantung pada chip A/B/C/D */
+      /* .choices .chip, .choices.idjp .chip{ width:28px; height:28px; font-size:12px; } */
+      .choices.idjp .furigana{ font-size:13px; }
+      .choices.idjp .kanji{ font-size:clamp(22px, 7vw, 32px); }
+      .choices.idjp .romaji{ font-size:13px; }
+    }
+
+    html.device-phone .choices, html.device-phone .choices.idjp{ grid-template-columns:1fr !important; gap:12px; }
+    html.device-tablet .choices, html.device-tablet .choices.idjp{ grid-template-columns:repeat(2,minmax(220px,1fr)) !important; gap:12px; }
+    html.device-phone .choices .jp{ font-size:clamp(18px, 6.5vw, 28px); }
+    html.device-tablet .choices .jp{ font-size:clamp(20px, 5.2vw, 32px); }
+
+    #toast{
+      position: fixed;
+      left: 50%;
+      bottom: calc(16px + env(safe-area-inset-bottom));
+      transform: translateX(-50%) translateY(8px);
+      background: #0b1220;
+      color: #fff;
+      padding: 10px 14px;
+      border-radius: 10px;
+      box-shadow: 0 8px 22px rgba(2,6,23,.2);
+      font-size: 14px;
+      z-index: 9999;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .25s ease, transform .25s ease;
+    }
+    #toast.show{ opacity: 1; transform: translateX(-50%) translateY(0); }
+  </style>
+
+<style>
+/* ===== Center pertanyaan khusus untuk mode JP→ID dan ID→JP ===== */
+#stage[data-mode="jp-id"] .jp,
+#stage[data-mode="jp-id"] .romaji,
+#stage[data-mode="id-jp"] .jp,
+/* NEW: Center question for kanji-id & kana-id modes */
+#stage[data-mode="kanji-id"] .jp,
+#stage[data-mode="kana-id"] .jp {
+  text-align: center;
+  margin-left: auto;
+  margin-right: auto;
+}
+</style>
+
+<style>
+/* Penyesuaian khusus untuk mode Kanji → Hiragana (kanji-kana) */
+#stage[data-mode="kanji-kana"]{ --qfs: clamp(28px, 6.8vw, 56px); }
+/* Pertanyaan di tengah + ukuran sama */
+#stage[data-mode="kanji-kana"] .jp{
+  text-align: center;
+  margin-left: auto;
+  margin-right: auto;
+  font-size: var(--qfs);
+  line-height: 1.1;
+}
+/* Jawaban di tengah dan tidak bold */
+#stage[data-mode="kanji-kana"] .choices .choice{
+  text-align: center;
+  font-weight: 400;
+  font-size: calc(var(--qfs) * 0.8);
+  line-height: 1.2;
+}
+/* Ukuran font jawaban Kana */
+#stage[data-mode="kanji-kana"] .choices.kanaonly .kana{
+  font-size: calc(var(--qfs) * 0.8);
+  line-height: 1.2;
+  white-space: normal;
+  word-break: keep-all;
+  overflow: visible;
+  text-overflow: clip;
+}
+</style>
+<style>
+/* Penyesuaian khusus untuk mode Hiragana → Kanji (kana-kanji) */
+#stage[data-mode="kana-kanji"]{ --qfs: clamp(28px, 6.8vw, 56px); }
+/* Pertanyaan di tengah + ukuran sama */
+#stage[data-mode="kana-kanji"] .jp{
+  text-align: center;
+  margin-left: auto;
+  margin-right: auto;
+  font-size: var(--qfs);
+  line-height: 1.1;
+}
+/* Jawaban di tengah dan tidak bold */
+#stage[data-mode="kana-kanji"] .choices .choice{
+  text-align: center;
+  font-weight: 400;
+  font-size: calc(var(--qfs) * 0.8);
+  line-height: 1.2;
+}
+/* Ukuran font jawaban Kanji */
+#stage[data-mode="kana-kanji"] .choices.kanjionly .kanji{
+  font-size: calc(var(--qfs) * 0.8);
+  line-height: 1.2;
+  white-space: normal;
+  word-break: keep-all;
+  overflow: visible;
+  text-overflow: clip;
+}
+</style>
+<style>
+/* Penyesuaian khusus untuk mode ID → JP */
+#stage[data-mode="id-jp"]{ --qfs: clamp(20px, 5vw, 40px); }
+/* Pertanyaan di tengah + ukuran sama */
+#stage[data-mode="id-jp"] .jp{
+  font-size: var(--qfs);
+  line-height: 1.1;
+}
+/* Jawaban di tengah dan tidak bold */
+#stage[data-mode="id-jp"] .choices.idjp .choice{
+  text-align: center;
+  font-weight: 400;
+}
+/* Ukuran font jawaban Kanji dan furigana setengah dari soal */
+#stage[data-mode="id-jp"] .choices.idjp .furigana{
+  font-size: calc(var(--qfs) / 2);
+  line-height: 1.2;
+  white-space: normal;
+  word-break: keep-all;
+  overflow: visible;
+  text-overflow: clip;
+  color: var(--muted);
+}
+#stage[data-mode="id-jp"] .choices.idjp .kanji{
+  font-size: calc(var(--qfs) * 0.9);
+  line-height: 1.2;
+  white-space: normal;
+  word-break: keep-all;
+  overflow: visible;
+  text-overflow: clip;
+}
+/* Penyesuaian jarak furigana dari kanji */
+#stage[data-mode="id-jp"] .choices.idjp .stack{
+  gap: 2px;
+}
+</style>
+
+<style>
+/* MODIFIKASI FINAL untuk fixing Kanji Spacing dan Hover Area */
+
+/* Atur ruby sebagai inline-block untuk mengukur lebar */
+#stage[data-mode="kanji-id"] .jp ruby,
+#stage[data-mode="kanji-kana"] .jp ruby,
+#stage[data-mode="kana-id"] .jp ruby {
+  display: inline-block;
+  position: relative; /* Agar rt bisa di-posisi-kan relatif terhadap ruby */
+}
+
+/* NEW: Style untuk mempersempit area hover */
+.hover-target {
+  display: inline-block; /* Memastikan elemen hanya selebar isinya (yaitu ruby) */
+  cursor: help; /* Petunjuk visual */
+}
+
+/* Sembunyikan furigana (rt) secara *visual dan layout* */
+#stage[data-mode="kanji-id"] .jp rt,
+#stage[data-mode="kanji-kana"] .jp rt,
+#stage[data-mode="kana-id"] .jp rt {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  color: var(--bad);
+  font-weight: 600;
+  /* Kunci utama: Posisikan rt secara absolut agar tidak mempengaruhi lebar rb */
+  position: absolute; 
+  left: 50%;
+  transform: translateX(-50%); /* Pusatkan furigana di atas kanji */
+  top: -1em; /* Posisikan di atas (sesuaikan 1em ke atas) */
+  pointer-events: none; /* Nonaktifkan interaksi mouse */
+  
+  /* Pastikan ukuran font rt yang asli */
+  font-size: .45em; /* Ambil ukuran dari CSS bawaan */
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap; /* Agar tidak pecah baris */
+}
+
+/* Tampilkan furigana saat kursor diarahkan ke pertanyaan (HANYA PADA AREA KONTEN) */
+#stage[data-mode="kanji-id"] .hover-target:hover rt, 
+#stage[data-mode="kanji-id"] .hover-target:focus-within rt, 
+#stage[data-mode="kanji-kana"] .hover-target:hover rt, 
+#stage[data-mode="kanji-kana"] .hover-target:focus-within rt, 
+#stage[data-mode="kana-id"] .hover-target:hover rt, 
+#stage[data-mode="kana-id"] .hover-target:focus-within rt { 
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* MODIFIKASI BARU: Memposisikan footer ke tengah untuk tablet ke atas */
+@media (min-width: 481px) {
+  .footer {
+    /* Menggantikan default display:flex, gap:10px, flex-wrap:wrap */
+    /* Menambahkan pemusatan */
+    justify-content: center; 
+  }
+}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="card">
+      <div class="controls">
+        <label for="file">Excel (.xlsx):</label>
+        <input id="file" type="file" accept=".xlsx" />
+      </div>
+      <div class="controls" style="justify-content:flex-end">
+        <label for="mode">Mode:</label>
+        <select id="mode">
+          <option value="jp-id">Tebak Arti (JP → ID)</option>
+          <option value="id-jp">Tebak Jepang (ID → JP)</option>
+          <option value="kana-kanji">Hiragana/Katakana → Kanji</option>
+          <option value="kanji-kana">Kanji → Hiragana/Katakana</option>
+          <option value="kanji-id">Kanji → Arti (ID)</option>
+          <option value="kana-id">Hiragana/Katakana → Arti (ID)</option>
+        </select>
+        <button id="start" class="primary">Mulai</button>
+      </div>
+    </header>
+    <div class="filters card hidden" id="sheet-selector-wrap">
+      <label for="sheet-selector">Pilih Sheet:</label>
+      <select id="sheet-selector"></select>
+    </div>
+
+    <main id="stage" class="card">
+      <p>1) Pilih file Excel dengan kolom <strong>Kanji</strong>, <strong>Hiragana/Katakana</strong>, <strong>Romaji</strong>, <strong>Arti (ID)</strong>.<br>
+      2) Pilih mode, lalu klik <em>Mulai</em>. Soal dibuat acak (A–D).</p>
+      <p style="color:#64748b">Catatan: Mode <strong>Kanji→Arti</strong>, <strong>Kanji→Kana</strong>, dan <strong>Kana→Arti</strong> menampilkan **bantuan** saat kursor diarahkan ke soal (hover).</p>
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js">
+// Similarity threshold for near-miss distractors (0..1)
+const SIMILARITY_THRESHOLD = 0.40;
+</script>
+  <script>
+    const $ = (s, p=document) => p.querySelector(s);
+    const $$ = (s, p=document) => Array.from(p.querySelectorAll(s));
+
+    let BANK = [];
+    let ACTIVE = [];
+    let order = [];
+    let idx = 0;
+    let score = 0;
+    let mode = "jp-id";
+    let MISTAKES_LOG = []; // NEW: Log untuk mencatat detail kesalahan
+    // selected & basis tidak lagi digunakan, tapi biarkan saja untuk mencegah error
+    let selected = new Set(["ALL"]);
+    let basis = "romaji";
+    let workbook = null;
+
+    // MODIFIKASI TIMER: Ubah dari countdown menjadi elapsed time
+    let startTime = 0; // Waktu saat timer dimulai (timestamp milisekon)
+    let elapsedTime = 0; // Waktu yang sudah berlalu (detik) - TIDAK DIPAKAI LAGI UNTUK PER SOAL
+    let totalTimeTaken = 0; // NEW: Total waktu pengerjaan kumulatif (detik)
+    let timerHandle = null;
+    let answered = false;
+    
+    const fileInput = $("#file");
+    const startBtn = $("#start");
+    const stage = $("#stage");
+    const modeSel = $("#mode");
+    // const azWrap = $("#az"); // Dihapus karena tidak lagi digunakan
+    // const stat = $("#stat"); // Dihapus karena tidak lagi digunakan
+    const sheetSelector = $("#sheet-selector");
+    const sheetSelectorWrap = $("#sheet-selector-wrap");
+
+    modeSel.addEventListener("change", e=> mode = e.target.value);
+
+    fileInput.addEventListener("change", async (e)=>{
+      const f = e.target.files[0];
+      if(!f) return;
+      const buf = await f.arrayBuffer();
+      workbook = XLSX.read(buf, {type:"array"});
+      
+      // Tampilkan sheet selector
+      sheetSelector.innerHTML = "";
+      workbook.SheetNames.forEach(sheetName => {
+        const opt = document.createElement("option");
+        opt.value = sheetName;
+        opt.textContent = sheetName;
+        sheetSelector.appendChild(opt);
+      });
+      sheetSelectorWrap.classList.remove("hidden");
+      
+      // Muat data dari sheet pertama secara default
+      loadDataFromSheet(workbook.SheetNames[0]);
+    });
+    
+    sheetSelector.addEventListener("change", (e) => {
+      loadDataFromSheet(e.target.value);
+    });
+
+    function loadDataFromSheet(sheetName) {
+      const ws = workbook.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(ws, {defval:""});
+      
+      const uniqueRows = new Map();
+      rows.forEach(r => {
+        const entry = {
+          kanji: (r["Kanji"]||"").toString().trim(),
+          kana: (r["Hiragana/Katakana"]||"").toString().trim(),
+          romaji: (r["Romaji"]||"").toString().trim(),
+          arti: (r["Arti (ID)"]||"").toString().trim(),
+        };
+        // Buat kunci unik dari kombinasi semua kolom
+        const key = `${entry.kanji}|${entry.kana}|${entry.romaji}|${entry.arti}`;
+        // Jika kunci belum ada, tambahkan ke Map
+        if (!uniqueRows.has(key)) {
+          uniqueRows.set(key, entry);
+        }
+      });
+      
+      BANK = Array.from(uniqueRows.values()).filter(r => r.kana || r.kanji || r.romaji || r.arti);
+
+      if(BANK.length===0){
+        alert("Tidak ada data. Pastikan kolom: Kanji, Hiragana/Katakana, Romaji, Arti (ID).");
+        return;
+      }
+      applyFilter(true);
+      stage.innerHTML = `<p><strong>${BANK.length}</strong> entri dimuat dari sheet <strong>${sheetName}</strong>. Pilih mode lalu klik <em>Mulai</em>.</p>`;
+    }
+
+
+    startBtn.addEventListener("click", ()=>{
+      if(ACTIVE.length===0){ alert("Tidak ada entri yang cocok dengan filter."); return; }
+
+      const needPair = (mode === "kana-kanji" || mode === "kanji-kana");
+      const pool = needPair ? ACTIVE.filter(r=> r.kana && r.kanji) : ACTIVE;
+      
+      const needKanji = (mode === "kanji-id" || mode === "kana-kanji" || mode === "kanji-kana");
+      const needKana = (mode === "kana-id" || mode === "kana-kanji" || mode === "kanji-kana");
+      const poolWithAssets = pool.filter(r => (!needKanji || r.kanji) && (!needKana || r.kana) && r.arti);
+
+      if(poolWithAssets.length < 4){
+        alert("Butuh minimal 4 entri dengan data yang lengkap untuk mode ini. Perluas filter dulu.");
+        return;
+      }
+      ACTIVE = poolWithAssets;
+      order = shuffle([...Array(ACTIVE.length).keys()]);
+      idx = 0; 
+      score = 0;
+      MISTAKES_LOG = []; // NEW: Reset log kesalahan
+      totalTimeTaken = 0; // Reset total waktu pengerjaan
+      renderQuestion();
+    });
+
+    function applyFilter(fromLoad=false){
+      // Kode filter dihapus, sekarang selalu aktifkan semua
+      ACTIVE = [...BANK];
+      // stat.textContent = `${ACTIVE.length}/${BANK.length} cocok`; // Dihapus
+      if(!fromLoad && $("#stage .meta")) {
+        stage.insertAdjacentHTML("afterbegin",
+          `<p style="color:#64748b;margin-top:0">Filter diubah. Klik <em>Mulai</em> lagi untuk memulai ulang.</p>`);
+      }
+    }
+
+    function renderQuestion(){
+      clearTimer();
+      answered = false;
+      stage.setAttribute("data-mode", mode);
+
+      const total = ACTIVE.length;
+      if(idx >= total){
+        
+        // Hitung total waktu pengerjaan
+        const totalMinutes = Math.floor(totalTimeTaken / 60);
+        const totalSeconds = Math.floor(totalTimeTaken % 60);
+        const totalTimeStr = `${totalMinutes.toString().padStart(2, '0')}:${totalSeconds.toString().padStart(2, '0')}`;
+        
+        // NEW: Hitung mistakes dari log
+        const mistakesCount = MISTAKES_LOG.length;
+        const totalAnswered = ACTIVE.length; // Semua soal dijawab
+        
+        stage.innerHTML = `
+          <h2>✔️ Selesai!</h2>
+          <p>Skor: <strong>${score}</strong> / ${totalAnswered} | (<strong>${Math.round((score / totalAnswered) * 100)}%</strong>)</p>
+          <p>Kesalahan (Jawaban Salah): <strong>${mistakesCount}</strong></p>
+          <p>Total Waktu Pengerjaan: <strong>${totalTimeStr}</strong></p>
+          
+          ${renderMistakesSummary()} <div class="footer">
+            <button class="primary" id="redo">Ulangi</button>
+          </div>
+        `;
+        $("#redo").addEventListener("click", ()=>{ 
+          idx=0; 
+          score=0; 
+          MISTAKES_LOG = []; // NEW: Reset log kesalahan saat mengulangi
+          totalTimeTaken=0; // Reset total waktu
+          order=shuffle(order); 
+          renderQuestion(); 
+        });
+        return;
+      }
+
+      const q = ACTIVE[order[idx]];
+      const correct = q;
+      const distractors = pickDistractors(q, 3);
+      const options = shuffle([correct, ...distractors]);
+
+      const jpRuby = rubyText(q.kanji, q.kana);
+      const progressHTML = progressBar(idx, total);
+      // MODIFIKASI TIMER: Gunakan timerDisplay() untuk timer maju
+      const timerHTML = timerDisplay(); 
+
+      let body = "";
+      if (mode === "jp-id") {
+        body = `
+          ${progressHTML}
+          <div class="jp">${jpRuby}</div>
+          <div class="romaji">${escapeHTML(q.romaji)}</div>
+          <div class="choices">
+            ${options.map((o,i)=>`
+              <button class="choice" data-correct="${o===correct}">
+                ${escapeHTML(o.arti || "-")}
+              </button>
+            `).join("")}
+          </div>
+        `;
+      } else if (mode === "id-jp") {
+        body = `
+          ${progressHTML}
+          <div class="jp">${escapeHTML(q.arti)}</div>
+          <div class="choices idjp">
+            ${options.map((o,i)=>`
+              <button class="choice" data-correct="${o===correct}">
+                <div class="stack">
+                  <div class="furigana">${escapeHTML(o.kana || "")}</div>
+                  <div class="kanji">${escapeHTML(o.kanji || "")}</div>
+                  ${o.romaji ? `<div class="romaji">${escapeHTML(o.romaji)}</div>` : ``}
+                </div>
+              </button>
+            `).join("")}
+          </div>
+        `;
+      } else if (mode === "kana-kanji") {
+        // QUESTION shows Kana; ANSWERS show ONLY Kanji
+        body = `
+          ${progressHTML}
+          <div class="jp">${rubyText(q.kana, "")}</div>
+          <div class="choices kanjionly">
+            ${options.map((o,i)=>`
+              <button class="choice" data-correct="${o===correct}">
+                <div class="kanji">${escapeHTML(o.kanji || "-")}</div>
+              </button>
+            `).join("")}
+          </div>
+        `;
+      } else if (mode === "kanji-kana") {
+        // QUESTION shows ONLY Kanji; ANSWERS show ONLY Kana (with bigger font)
+        // MODIFIKASI PENTING: Bungkus dengan .hover-target
+        body = `
+          ${progressHTML}
+          <div class="jp">
+            <span class="hover-target">${rubyText(q.kanji, q.arti)}</span>
+          </div> 
+          <div class="choices kanaonly">
+            ${options.map((o,i)=>`
+              <button class="choice" data-correct="${o===correct}">
+                <div class="kana">${escapeHTML(o.kana || "-")}</div>
+              </button>
+            `).join("")}
+          </div>
+        `;
+      } else if (mode === "kanji-id") {
+        // NEW MODE: Kanji -> ID
+        // MODIFIKASI PENTING: Bungkus dengan .hover-target
+        body = `
+          ${progressHTML}
+          <div class="jp">
+            <span class="hover-target">${rubyText(q.kanji, q.kana)}</span>
+          </div> 
+          <div class="choices">
+            ${options.map((o,i)=>`
+              <button class="choice" data-correct="${o===correct}">
+                ${escapeHTML(o.arti || "-")}
+              </button>
+            `).join("")}
+          </div>
+        `;
+      } else if (mode === "kana-id") {
+        // NEW MODE: Kana -> ID
+        // MODIFIKASI PENTING: Bungkus dengan .hover-target
+        body = `
+          ${progressHTML}
+          <div class="jp">
+            <span class="hover-target">${rubyText(q.kana, q.kanji || q.romaji)}</span>
+          </div> 
+          <div class="choices">
+            ${options.map((o,i)=>`
+              <button class="choice" data-correct="${o===correct}">
+                ${escapeHTML(o.arti || "-")}
+              </button>
+            `).join("")}
+          </div>
+        `;
+      }
+
+
+      stage.innerHTML = `
+        <div class="meta">
+          <div class="meta-stat">Soal <strong>${idx+1}</strong> / ${ACTIVE.length}</div>
+          <div class="meta-score">
+            <div>Skor: <strong>${score}</strong> | (<strong>${(idx>0?Math.round((score/idx)*100):0)}%</strong>)</div>
+            ${timerHTML}
+          </div>
+        </div>
+        ${body}
+        <div class="footer">
+          <button id="skip">Lewati</button>
+          <button id="next" class="primary hidden">Soal berikutnya</button>
+        </div>
+      `;
+
+      $$("#stage .choice").forEach(btn=>{
+        btn.addEventListener("click", ()=>{
+          if(answered) return;
+          answered = true;
+          {const __sk=document.getElementById("skip"); if(__sk){ __sk.remove(); }}
+          $$("#stage .choice").forEach(b=> b.disabled = true);
+          const ok = btn.dataset.correct === "true";
+          if(ok){
+            btn.classList.add("correct");
+            score++;
+            
+            // MODIFIKASI TIMER: Hentikan timer dan simpan total waktu saat ini
+            const now = performance.now();
+            // totalTimeTaken diupdate ke total waktu yang sudah berjalan
+            totalTimeTaken = (now - startTime) / 1000; 
+            
+            clearTimer();
+            setTimeout(()=>{ idx++; renderQuestion(); }, 400);
+          } else {
+            btn.classList.add("wrong");
+            
+            // NEW: Catat detail kesalahan
+            const wrongAnswerText = btn.textContent.trim();
+            MISTAKES_LOG.push({
+              question: q,
+              wrongAnswer: wrongAnswerText,
+              mode: mode
+            });
+            // AKHIR NEW
+            
+            const right = $("#stage .choice[data-correct='true']");
+            if(right) right.classList.add("correct");
+            $("#next").classList.remove("hidden");
+            // MODIFIKASI TIMER: Clear timer saat salah, waktu tidak dihitung
+            clearTimer();
+          }
+        });
+      });
+      $("#skip").addEventListener("click", ()=>{ 
+        // Saat skip, waktu tidak ditambahkan, hanya lanjut ke soal berikutnya
+        showToast("Soal diputar acak"); 
+        try{ const cur = order.splice(idx,1)[0]; order.push(cur); idx++; }catch(e){} 
+        renderQuestion(); 
+      });
+      $("#next").addEventListener("click", ()=>{ idx++; renderQuestion(); });
+
+      startTimer();
+    }
+
+    function progressBar(i, total){
+      const pct = Math.round((i/total)*100);
+      return `<div class="progress"><div class="fill" style="width:${pct}%;"></div></div>`;
+    }
+    
+    // MODIFIKASI TIMER: Fungsi untuk menampilkan total waktu kumulatif
+    function timerDisplay(){
+      return `
+        <div id="timer-placement">
+          <div class="ttext" id="ttext">00:00</div>
+        </div>
+      `;
+    }
+    
+    // MODIFIKASI TIMER: Fungsi startTimer untuk hitung maju kumulatif
+    function startTimer(){
+      // Hitung kapan timer seharusnya dimulai agar waktu berjalan = totalTimeTaken sebelumnya
+      // totalTimeTaken (detik) * 1000 = milisekon
+      startTime = performance.now() - (totalTimeTaken * 1000); 
+      
+      const ttext = $("#ttext");
+      
+      // Tampilkan total waktu yang sudah terlewat (dari soal sebelumnya)
+      updateTimerUI(totalTimeTaken); 
+      
+      timerHandle = setInterval(()=>{
+        const now = performance.now();
+        // Hitung total waktu kumulatif yang sudah berlalu
+        const currentTotalElapsed = (now - startTime) / 1000; 
+        updateTimerUI(currentTotalElapsed);
+      }, 1000); // Update setiap 1 detik
+
+      function updateTimerUI(seconds){
+        const minutes = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        const timeStr = `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        if(ttext) ttext.textContent = timeStr;
+      }
+    }
+    
+    // MODIFIKASI TIMER: Fungsi clearTimer tetap sama
+    function clearTimer(){ if(timerHandle){ clearInterval(timerHandle); timerHandle = null; } }
+    
+    // MODIFIKASI: Fungsi rubyText
+    function rubyText(kanji, kana){
+      kanji = (kanji||"").trim();
+      kana = (kana||"").trim();
+      
+      // Jika kanji kosong atau kanji sama dengan kana/ruby, tampilkan apa adanya
+      if(!kanji || kanji===kana){ return `<span>${escapeHTML(kana || kanji)}</span>`; }
+      
+      // Jika ada keduanya, gunakan tag ruby
+      return `<ruby><rb>${escapeHTML(kanji)}</rb><rt>${escapeHTML(kana)}</rt></ruby>`;
+    }
+
+    // NEW: Fungsi untuk menampilkan ringkasan kesalahan (sesuai format baru)
+    function renderMistakesSummary() {
+      if (MISTAKES_LOG.length === 0) {
+        return `<h3>🎉 Hebat! Tidak ada kesalahan!</h3>`;
+      }
+
+      const listItems = MISTAKES_LOG.map((log, i) => {
+        const q = log.question;
+        // Format pertanyaan sesuai permintaan: Soal (Jp/ID) : Jawaban Benar
+        const mistakeDisplay = formatQuestionSimple(q, log.mode); 
+        const correctDisplay = formatCorrectAnswerSimple(q, log.mode);
+        
+        // Hilangkan informasi Jawaban Anda (wrongAnswer) dan Soal ke-(i)
+        return `
+          <li style="margin-bottom: 8px; padding: 6px 10px; border-radius: 6px; background: #fff7f7; border: 1px solid #fecaca; font-size: 15px;">
+            <strong>${mistakeDisplay}</strong> : ${correctDisplay}
+          </li>
+        `;
+      }).join('');
+      
+      return `
+        <h3 style="margin-top: 20px;">Daftar Kesalahan (${MISTAKES_LOG.length})</h3>
+        <p style="color:#64748b; margin-bottom: 12px;">Soal : Jawaban Benar</p>
+        <ul style="list-style: none; padding: 0;">
+          ${listItems}
+        </ul>
+      `;
+    }
+
+    // Helper untuk memformat soal (Kanji/Kana/Arti)
+    function formatQuestionSimple(q, mode) {
+        if (mode === "jp-id" || mode === "kanji-kana" || mode === "kanji-id") {
+            // Tampilkan Kanji (dengan furigana jika ada)
+            return rubyText(q.kanji, q.kana || q.romaji);
+        } else if (mode === "id-jp") {
+            // Tampilkan Arti (ID) sebagai soal
+            return `*${escapeHTML(q.arti)}*`;
+        } else if (mode === "kana-kanji" || mode === "kana-id") {
+            // Tampilkan Kana sebagai soal
+            return escapeHTML(q.kana);
+        }
+        return "";
+    }
+
+    // Helper untuk memformat jawaban benar berdasarkan mode
+    function formatCorrectAnswerSimple(q, mode) {
+        if (mode === "jp-id" || mode === "kanji-id" || mode === "kana-id") {
+            // Jawaban Benar adalah Arti (ID)
+            return escapeHTML(q.arti);
+        } else if (mode === "id-jp") {
+            // Jawaban Benar adalah Jepang (Kanji + Kana)
+            return `${rubyText(q.kanji, q.kana)} ${q.romaji ? `(${escapeHTML(q.romaji)})` : ''}`;
+        } else if (mode === "kana-kanji") {
+            // Jawaban Benar adalah Kanji
+            return escapeHTML(q.kanji);
+        } else if (mode === "kanji-kana") {
+            // Jawaban Benar adalah Kana
+            return escapeHTML(q.kana);
+        }
+        return "";
+    }
+
+
+// NEW: Tambahkan kamus sinonim di sini.
+// Kata kunci bisa berupa kanji atau kana.
+const SYNONYMS = {
+  // Pasangan sinonim dari diskusi sebelumnya
+  "友人": ["友達", "親友"],
+  "嬉しい": ["楽しい", "喜ばしい", "幸せな"],
+  "頑張る": ["努力する", "精一杯やる", "励む"],
+  "景色": ["風景", "眺め", "光景"],
+  "試験": ["テスト", "検定", "評価"],
+  "急に": ["突然", "いきなり", "不意に"],
+  "正しい": ["正確", "適切", "妥当"],
+  "悲しい": ["寂しい", "辛い", "苦しい"],
+  "多い": ["たくさん", "多数", "大勢"],
+  "少ない": ["わずか", "僅か"],
+  "難しい": ["複雑", "困難"],
+  "面白い": ["楽しい", "興味深い"],
+  "簡単": ["やさしい", "単純"],
+  "便利": ["役に立つ", "有用"],
+  "大切": ["重要", "貴重"],
+  "有名": ["著名", "名高い"],
+  "安全": ["무사", "大丈夫"],
+  "自由": ["勝手", "気まま"],
+  "普通": ["一般", "当たり前"],
+  "無理": ["不可能"],
+  "真面目": ["一生懸命", "律儀"],
+  "必ず": ["絶対に", "きっと"],
+  "初めて": ["最初に"],
+  "本当に": ["実に", "実際に"],
+  "ゆっくり": ["のんびり", "徐々に"],
+  "だんだん": ["次第に", "少しずつ"],
+  "めったに": ["ほとんど"],
+  "結局": ["最終的", "ついに"],
+  "残念": ["惜しい", "悔しい"],
+  "急ぐ": ["慌てる", "速める"],
+  "続く": ["継続", "持続"],
+  "変わる": ["変化", "変更"],
+  "增える": ["増加", "增", "大"],
+  "減る": ["減少", "縮小"],
+  "始まる": ["開始", "スタート"],
+  "終わる": ["終了", "終わり"],
+  "集まる": ["集合", "集う"],
+  "並ぶ": ["並列", "列ぶ"],
+  "通る": ["通過", "通行"],
+  "着く": ["到着", "届く"],
+  "建つ": ["建設", "建築"],
+  "壊れる": ["破損", "崩壊"],
+  "治る": ["回復", "治癒"],
+  "足りる": ["十分", "満たす"],
+  "似る": ["そっくり", "類似"],
+  "違う": ["異なる", "相違"],
+  "決める": ["決定", "定める"],
+  "比べる": ["比較", "対比"],
+  "困る": ["悩む", "苦しむ"],
+  "緊張": ["張り詰める", "強張る"],
+  "不安": ["心配", "憂鬱"],
+  "満足": ["納得", "cukup"],
+  "希望": ["期待", "願い"],
+  "興味": ["関心", "好奇心"],
+  "失敗": ["挫折", "不成功"],
+  "成功": ["達成", "成就"],
+  "約束": ["誓i", "取り決め"],
+
+  // NEW: Pasangan sinonim dari daftar yang Anda berikan
+  "嗅ぎます": ["匂います"],
+  "触ります": ["撫でます"],
+  "飾ります": ["飾る"],
+  "今すぐ": ["今すぐにでも"],
+  "午後": ["夕方"],
+  "午前": ["朝"],
+  "教わります": ["教える"],
+  "終わります": ["終了します"],
+  "数えます": ["計算します"],
+  "描きます": ["書きます"],
+  "怒ります": ["腹が立ちます"],
+  "帰国します": ["国に帰る"],
+  "進みます": ["前進します"],
+  "勤めます": ["働きます"],
+  "包みます": ["巻きます"],
+  "濡れます": ["湿ります"],
+  "驚きます": ["びっくりします"],
+  "乾きます": ["乾燥합니다"],
+  "単語": ["言葉"],
+  "布団": ["ふとん"],
+  "風邪": ["かぜ"],
+  "強い": ["力強い"],
+  "寝坊します": ["朝寝坊します"],
+  "尋ねます": ["聞きます"],
+  "招待します": ["招きます"],
+  "振り込みます": ["入金します"],
+  "死にます": ["亡くなります"],
+  "生きます": ["生きています"],
+  "生みます": ["産みます"],
+  "迷った": ["迷っています"],
+  "怒られました": ["怒られた"],
+  "同僚": ["仲間", "同期"],
+  "困っている": ["困ります"],
+  "汚い": ["汚れる"],
+  "注意します": ["気をつけます"],
+  "盗みます": ["盗まられます"],
+  "相談します": ["話し合います"],
+  "謝ります": ["謝罪します"],
+  "輸入します": ["輸入"],
+  "輸出します": ["輸出"],
+  "入院します": ["병원에 입원합니다"],
+  "退院します": ["병원에서 퇴원합니다"],
+  "連絡します": ["連絡を取ります"],
+  "泥棒": ["盗人"],
+  "原因": ["理由"],
+  "面接": ["インタビュー"],
+  "親友": ["友人", "友達"],
+  "調味料": ["味付け"],
+  "上司": ["ボス"],
+  "行います": ["実行します"],
+  "繰り返します": ["繰り返す"],
+  "結婚": ["結婚式"],
+  "渋滞": ["混雑"],
+  "動画": ["ビデオ"],
+  "生産する": ["作ります"],
+  "工場": ["製作所"],
+  "お米": ["ご飯"],
+  "賛成します": ["同意します"],
+  "反対します": ["反対する"],
+  "遠慮합니다": ["遠慮する"],
+  "騒ぎます": ["騒ぐ"],
+  "営業합니다": ["영업하는"],
+  "被ります": ["被る"],
+  "履きます": ["履く"],
+  "諦めます": ["諦める"],
+  "鳴ります": ["鳴る"],
+  "鳴きます": ["鳴く"],
+  "政府": ["行政"],
+  "計画": ["プラン"],
+  "薄い": ["うすい"],
+  "腕": ["うで"],
+  "家賃": ["やちん"],
+  "おかわり": ["おかわり"]
+};
+
+function pickDistractors(q, n){
+  // Safe local threshold (fallback to 0.40 if global not defined)
+  const __threshold = (typeof SIMILARITY_THRESHOLD !== "undefined") ? SIMILARITY_THRESHOLD : 0.40;
+
+  // Tentukan field kunci sesuai mode & bentuk jawaban yang tampil
+  const keyField = (typeof mode !== "undefined" && (mode === "jp-id" || mode === "kanji-id" || mode === "kana-id")) ? "arti"
+                : (typeof mode !== "undefined" && mode === "id-jp") ? "kana_kanji_romaji"
+                : (typeof mode !== "undefined" && mode === "kana-kanji") ? "kanji"
+                : /* kanji-kana / default */ "kana";
+
+  // Pool kandidat dasar (wajib punya pasangan utk mode pasangan)
+  let pool = (typeof ACTIVE !== "undefined" && Array.isArray(ACTIVE) ? ACTIVE : []).filter(x => x !== q);
+  if (typeof mode !== "undefined" && (mode === "kana-kanji" || mode === "kanji-kana")) {
+    pool = pool.filter(x => x && x.kana && x.kanji);
+  }
+  
+  if (typeof mode !== "undefined" && (mode === "kanji-id")) {
+    pool = pool.filter(x => x && x.kanji && x.arti);
+  }
+
+  if (typeof mode !== "undefined" && (mode === "kana-id")) {
+    pool = pool.filter(x => x && x.kana && x.arti);
+  }
+  
+  const uniq = [];
+  
+  // NEW: Cari sinonim di kamus SYNONYMS
+  const keyToLookup = (q.kanji && SYNONYMS[q.kanji]) ? q.kanji : q.kana;
+  if (keyToLookup && SYNONYMS[keyToLookup]) {
+    const synonyms = SYNONYMS[keyToLookup];
+    const synonymDistractors = synonyms
+      .map(s => pool.find(item => item.kanji === s || item.kana === s))
+      .filter(item => item && !isSameAsCorrect(item, q, mode));
+
+    for (const item of synonymDistractors) {
+      if (isDuplicateOpt(uniq, item)) continue;
+      if (isSameAsCorrect(item, q, mode)) continue; // Double check
+      uniq.push(item);
+      if (uniq.length >= n) break;
+    }
+  }
+
+  // Fallback ke logika kemiripan string jika sinonim tidak mencukupi
+  if (uniq.length < n) {
+    // Buat representasi teks yang akan dibandingkan
+    const qKey = makeAnswerKey(q, keyField);
+
+    // Skor kemiripan setiap kandidat
+    const scored = pool
+      .filter(x => !uniq.includes(x))
+      .map(item => {
+        const k = makeAnswerKey(item, keyField);
+        const s = similarity(qKey, k); // 0..1
+        return { item, s };
+      });
+
+    // Urutkan dari paling mirip
+    scored.sort((a,b) => b.s - a.s);
+
+    // Ambil yang paling mirip dengan menjaga keunikan per mode
+    for (const {item, s} of scored) {
+      // Batasi terlalu identik (skor 0.99) agar tidak duplikat persis
+      if (s < __threshold || s >= 0.99) continue;
+      if (isDuplicateOpt(uniq, item)) continue;
+      if (isSameAsCorrect(item, q, mode)) continue;
+
+      uniq.push(item);
+      if (uniq.length >= n) break;
+    }
+  }
+
+  // Fallback: jika masih kurang, isi dengan acak unik seperti sebelumnya
+  if (uniq.length < n) {
+    const remaining = pool.filter(x => !uniq.includes(x));
+    if (typeof shuffle === "function") shuffle(remaining);
+    for (const item of remaining) {
+      if (isDuplicateOpt(uniq, item)) continue;
+      if (isSameAsCorrect(item, q, mode)) continue;
+      
+      uniq.push(item);
+      if (uniq.length >= n) break;
+    }
+  }
+  return uniq.slice(0, n);
+}
+
+
+
+    function shuffle(a){
+      for(let i=a.length-1;i>0;i--){
+        const j = Math.floor(Math.random()*(i+1));
+        [a[i],a[j]] = [a[j],a[i]];
+      }
+      return a;
+    }
+    function escapeHTML(s){
+      return (s||"").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&quot;","'":"&#039;"}[c]));
+    }
+  
+
+function isSameAsCorrect(item, correctItem, mode) {
+  if (!item || !correctItem) return false;
+
+  if (mode === "jp-id" || mode === "kanji-id" || mode === "kana-id") {
+    // Bandingkan arti (ID)
+    return item.arti === correctItem.arti;
+  } else if (mode === "id-jp") {
+    // Bandingkan gabungan kana, kanji, dan romaji
+    return item.kana === correctItem.kana && item.kanji === correctItem.kanji && item.romaji === correctItem.romaji;
+  } else if (mode === "kana-kanji") {
+    // Bandingkan kanji
+    return item.kanji === correctItem.kanji;
+  } else if (mode === "kanji-kana") {
+    // Bandingkan kana
+    return item.kana === correctItem.kana;
+  }
+  return false;
+}
+
+// ===== Near-miss distractor helpers =====
+function makeAnswerKey(row, keyField){
+  if (!row) return "";
+  let raw = "";
+  if (keyField === "arti") raw = row.arti || "";
+  else if (keyField === "kanji") raw = row.kanji || "";
+  else if (keyField === "kana") raw = row.kana || "";
+  else { // "kana_kanji_romaji"
+    raw = [row.kana||"", row.kanji||"", row.romaji||""].filter(Boolean).join(" | ");
+  }
+  return normalizeText(raw);
+}
+
+function isDuplicateOpt(list, cand){
+  try {
+    if (typeof mode !== "undefined" && (mode === "jp-id" || mode === "kanji-id" || mode === "kana-id")) {
+      return list.some(u => u.arti === cand.arti);
+    } else if (typeof mode !== "undefined" && mode === "id-jp") {
+      return list.some(u => (u.kanji === cand.kanji && u.kana === cand.kana && u.romaji === cand.romaji));
+    } else if (typeof mode !== "undefined" && mode === "kana-kanji") {
+      return list.some(u => u.kanji === cand.kanji);
+    } else { // "kanji-kana" or default
+      return list.some(u => u.kana === cand.kana);
+    }
+  } catch(e){
+    return false;
+  }
+}
+
+function normalizeText(s){
+  return (s||"")
+    .toString()
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/[“”„‟"']/g,'"')
+    .replace(/[‐-‒–—―]/g,'-')
+    .replace(/\s+/g,' ')
+    .trim();
+}
+
+function bigrams(str){
+  const s = str;
+  const out = [];
+  for (let i=0; i<s.length-1; i++) out.push(s.slice(i, i+2));
+  return out;
+}
+
+function jaccardBigrams(a, b){
+  if (!a || !b) return 0;
+  const A = bigrams(a), B = bigrams(b);
+  if (A.length === 0 || B.length === 0) return 0;
+  const setA = new Map();
+  for (const x of A) setA.set(x, (setA.get(x)||0)+1);
+  const setB = new Map();
+  for (const x of B) setB.set(x, (setB.get(x)||0)+1);
+  let inter = 0, union = 0;
+  const keys = new Set([...setA.keys(), ...setB.keys()]);
+  for (const k of keys) {
+    const aC = setA.get(k)||0, bC = setB.get(k)||0;
+    inter += Math.min(aC, bC);
+    union += Math.max(aC, bC);
+  }
+  return union ? (inter / union) : 0;
+}
+
+function levenshteinSim(a, b){
+  if (a === b) return 1;
+  const m = a.length, n = b.length;
+  if (m === 0 || n === 0) return 0;
+  const dp = Array(n+1).fill(0);
+  for (let j=0; j<=n; j++) dp[j] = j;
+  for (let i=1; i<=m; i++){
+    let prev = dp[0];
+    dp[0] = i;
+    for (let j=1; j<=n; j++){
+      const temp = dp[j];
+      const cost = (a[i-1] === b[j-1]) ? 0 : 1;
+      dp[j] = Math.min(
+        dp[j] + 1,
+        dp[j-1] + 1,
+        prev + cost
+      );
+      prev = temp;
+    }
+  }
+  const dist = dp[n];
+  const maxLen = Math.max(m, n);
+  return 1 - (dist / maxLen);
+}
+
+function commonPrefixLen(a, b){
+  const L = Math.min(a.length, b.length);
+  let i = 0;
+  while (i<L && a[i] === b[i]) i++;
+  return i;
+}
+
+function similarity(a, b){
+  if (!a || !b) return 0;
+  const j = jaccardBigrams(a, b);
+  const l = levenshteinSim(a, b);
+  let score = 0.6*j + 0.4*l;
+  const commonPrefix = commonPrefixLen(a, b);
+  if (commonPrefix >= 2) score += Math.min(0.05, commonPrefix * 0.01);
+  return Math.max(0, Math.min(0.999, score));
+}
+
+</script>
+
+  <script>
+  (function(){
+    function applyClass(cls){
+      var root = document.documentElement;
+      root.classList.remove('device-phone','device-tablet','device-desktop');
+      root.classList.add('device-' + cls);
+      root.setAttribute('data-device', cls);
+    }
+    function classify(){
+      var ua = navigator.userAgent || "";
+      var touch = (navigator.maxTouchPoints || 0) > 0;
+      var isIpadOS13 = (navigator.platform === 'MacIntel' && (navigator.maxTouchPoints||0) > 1);
+      var isTabletUA = /iPad|Tablet|SM-T|SM-P|Lenovo Tab|Xoom|Nexus 7|Nexus 10|Kindle|Silk|Tab|Pad/i.test(ua);
+      var isPhoneUA  = /iPhone|iPod|Android.*Mobile|Windows Phone|BlackBerry/i.test(ua);
+      var cssW = Math.min(window.innerWidth || 0, window.innerHeight || 0);
+
+      var device = 'desktop';
+      if (cssW <= 480) device = 'phone';
+      else if (cssW <= 1024) device = 'tablet';
+      else device = 'desktop';
+
+      if (isIpadOS13 || isTabletUA) device = (cssW <= 480 ? 'phone' : 'tablet');
+      if (isPhoneUA && cssW < 520) device = 'phone';
+      if (!touch && cssW > 1024) device = 'desktop';
+
+      return device;
+    }
+
+    function update(){ applyClass(classify()); }
+    try{ localStorage.removeItem('deviceOverride'); }catch(e){}
+    update();
+    window.addEventListener('resize', update, {passive:true});
+    window.addEventListener('orientationchange', update, {passive:true});
+  })();
+  </script>
+
+  <div id="toast" role="status" aria-live="polite" hidden></div>
+  <script>
+    (function(){
+      var TOAST_TIMER = null;
+      window.showToast = function(msg){
+        try{
+          var el = document.getElementById('toast');
+          if(!el) return;
+          el.textContent = msg || '';
+          el.hidden = false;
+          el.classList.add('show');
+          if(TOAST_TIMER) clearTimeout(TOAST_TIMER);
+          TOAST_TIMER = setTimeout(function(){
+            el.classList.remove('show');
+            setTimeout(function(){ el.hidden = true; }, 250);
+          }, 1600);
+        }catch(e){}
+      };
+    })();
+  </script>
+</body>
+</html>
